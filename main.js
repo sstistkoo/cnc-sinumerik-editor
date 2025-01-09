@@ -23,29 +23,74 @@ document.addEventListener('DOMContentLoaded', function() {
 
 // Inicializace canvasu a touch eventů
 function initializeCanvas() {
-    canvas = document.getElementById('canvas');
+    canvas = document.getElementById('simulationCanvas');
     if (!canvas) {
-        console.error('Canvas element nenalezen!');
+        console.error('Canvas element not found!');
         return;
     }
+    console.log('Canvas initialized');
 
-    ctx = canvas.getContext('2d');
-    if (!ctx) {
-        console.error('Canvas context nenalezen!');
-        return;
-    }
+    // Přidání touch event listenerů
+    canvas.addEventListener('touchstart', handleTouchStart, { passive: false });
+    canvas.addEventListener('touchmove', handleTouchMove, { passive: false });
+    canvas.addEventListener('touchend', handleTouchEnd);
+    console.log('Touch events added');
 
-    // Nastavení velikosti canvasu
+    // Nastavení výchozí velikosti
     resizeCanvas();
-    window.addEventListener('resize', resizeCanvas);
-
+    
     // Vykreslení prázdné mřížky
     drawGrid();
+}
 
-    // Inicializace touch eventů
-    canvas.addEventListener('touchstart', handleTouchStart);
-    canvas.addEventListener('touchmove', handleTouchMove);
-    canvas.addEventListener('touchend', handleTouchEnd);
+// Funkce pro zpracování touch eventů
+let lastTouchDistance = 0;
+
+function handleTouchStart(e) {
+    console.log('Touch start', e.touches.length);
+    if (e.touches.length === 2) {
+        e.preventDefault();
+        const touch1 = e.touches[0];
+        const touch2 = e.touches[1];
+        lastTouchDistance = Math.hypot(
+            touch2.clientX - touch1.clientX,
+            touch2.clientY - touch1.clientY
+        );
+    }
+}
+
+function handleTouchMove(e) {
+    if (e.touches.length === 2) {
+        console.log('Touch move - zooming');
+        e.preventDefault();
+        const touch1 = e.touches[0];
+        const touch2 = e.touches[1];
+        const currentDistance = Math.hypot(
+            touch2.clientX - touch1.clientX,
+            touch2.clientY - touch1.clientY
+        );
+
+        const delta = currentDistance - lastTouchDistance;
+        if (Math.abs(delta) > 1) {
+            scale *= delta > 0 ? 1.02 : 0.98;
+            scale = Math.min(Math.max(0.5, scale), 5);
+            
+            const ctx = canvas.getContext('2d');
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            ctx.save();
+            ctx.scale(scale, scale);
+            drawGrid();
+            drawSimulation();
+            ctx.restore();
+            
+            lastTouchDistance = currentDistance;
+        }
+    }
+}
+
+function handleTouchEnd() {
+    console.log('Touch end');
+    lastTouchDistance = 0;
 }
 
 // Funkce pro změnu velikosti canvasu
@@ -96,6 +141,7 @@ function setupCanvasEventListeners() {
 function drawSimulation() {
     if (!ctx || !canvas) return;
 
+    ctx = canvas.getContext('2d');
     ctx.clearRect(0, 0, canvas.width, canvas.height);
     
     // Aplikace transformací
@@ -653,50 +699,4 @@ N40 G0 X0 Z0`
     for (const [name, content] of Object.entries(EXAMPLE_PROGRAMS.sub)) {
         displaySubProgram(name, content);
     }
-}
-
-// Funkce pro zpracování touch eventů
-let lastTouchDistance = 0;
-
-function handleTouchStart(e) {
-    if (e.touches.length === 2) {
-        e.preventDefault();
-        const touch1 = e.touches[0];
-        const touch2 = e.touches[1];
-        lastTouchDistance = Math.hypot(
-            touch2.clientX - touch1.clientX,
-            touch2.clientY - touch1.clientY
-        );
-    }
-}
-
-function handleTouchMove(e) {
-    if (e.touches.length === 2) {
-        e.preventDefault();
-        const touch1 = e.touches[0];
-        const touch2 = e.touches[1];
-        const currentDistance = Math.hypot(
-            touch2.clientX - touch1.clientX,
-            touch2.clientY - touch1.clientY
-        );
-
-        const delta = currentDistance - lastTouchDistance;
-        if (Math.abs(delta) > 1) {
-            scale *= delta > 0 ? 1.02 : 0.98;
-            scale = Math.min(Math.max(0.5, scale), 5);
-            
-            const ctx = canvas.getContext('2d');
-            ctx.clearRect(0, 0, canvas.width, canvas.height);
-            ctx.save();
-            ctx.scale(scale, scale);
-            drawSimulation(); // Překreslí simulaci s novým měřítkem
-            ctx.restore();
-            
-            lastTouchDistance = currentDistance;
-        }
-    }
-}
-
-function handleTouchEnd() {
-    lastTouchDistance = 0;
 }
