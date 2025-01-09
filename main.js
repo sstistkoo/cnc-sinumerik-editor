@@ -10,49 +10,8 @@ let scale = 1;
 let offsetX = 0;
 let offsetY = 0;
 
-// Funkce pro logování do localStorage
-function remoteLog(message) {
-    console.log('DEBUG:', message); // Přidáváme přímý výpis do konzole
-    const logs = JSON.parse(localStorage.getItem('touchLogs') || '[]');
-    logs.push({
-        message: message,
-        timestamp: new Date().toISOString(),
-        userAgent: navigator.userAgent
-    });
-    localStorage.setItem('touchLogs', JSON.stringify(logs));
-}
-
-// Funkce pro zobrazení logů
-function showLogs() {
-    const logs = JSON.parse(localStorage.getItem('touchLogs') || '[]');
-    console.log('=== Touch Logs ===');
-    logs.forEach(log => {
-        console.log(`${log.timestamp}: ${log.message}`);
-    });
-    console.log('================');
-    localStorage.removeItem('touchLogs'); // Vyčistíme logy po zobrazení
-}
-
 // Inicializace po načtení dokumentu
 document.addEventListener('DOMContentLoaded', function() {
-    console.log('DOM Content Loaded');
-    
-    // Přidáme tlačítko pro zobrazení logů
-    const button = document.createElement('button');
-    button.textContent = 'Zobrazit logy';
-    button.style.position = 'fixed';
-    button.style.bottom = '10px';
-    button.style.right = '10px';
-    button.style.zIndex = '9999';
-    button.style.padding = '10px';
-    button.style.backgroundColor = '#007bff';
-    button.style.color = 'white';
-    button.style.border = 'none';
-    button.style.borderRadius = '5px';
-    button.onclick = showLogs;
-    document.body.appendChild(button);
-    console.log('Debug button added');
-
     // Počkáme na načtení DOM
     setTimeout(() => {
         initializeCanvas();
@@ -62,80 +21,26 @@ document.addEventListener('DOMContentLoaded', function() {
     }, 100);
 });
 
-// Inicializace canvasu a touch eventů
+// Inicializace canvasu
 function initializeCanvas() {
-    canvas = document.getElementById('simulationCanvas');
+    canvas = document.getElementById('canvas');
     if (!canvas) {
-        console.error('Canvas element not found!');
+        console.error('Canvas element nenalezen!');
         return;
     }
-    console.log('Canvas initialized');
 
-    // Přidání touch event listenerů
-    canvas.addEventListener('touchstart', handleTouchStart, { passive: false });
-    canvas.addEventListener('touchmove', handleTouchMove, { passive: false });
-    canvas.addEventListener('touchend', handleTouchEnd);
-    console.log('Touch events added');
+    ctx = canvas.getContext('2d');
+    if (!ctx) {
+        console.error('Canvas context nenalezen!');
+        return;
+    }
 
-    // Nastavení výchozí velikosti
+    // Nastavení velikosti canvasu
     resizeCanvas();
-    
+    window.addEventListener('resize', resizeCanvas);
+
     // Vykreslení prázdné mřížky
     drawGrid();
-}
-
-// Funkce pro zpracování touch eventů
-let lastTouchDistance = 0;
-
-function handleTouchStart(e) {
-    remoteLog('Touch start - počet prstů: ' + e.touches.length);
-    if (e.touches.length === 2) {
-        e.preventDefault();
-        const touch1 = e.touches[0];
-        const touch2 = e.touches[1];
-        lastTouchDistance = Math.hypot(
-            touch2.clientX - touch1.clientX,
-            touch2.clientY - touch1.clientY
-        );
-        remoteLog('Touch start - vzdálenost: ' + lastTouchDistance);
-    }
-}
-
-function handleTouchMove(e) {
-    if (e.touches.length === 2) {
-        remoteLog('Touch move - zooming');
-        e.preventDefault();
-        const touch1 = e.touches[0];
-        const touch2 = e.touches[1];
-        const currentDistance = Math.hypot(
-            touch2.clientX - touch1.clientX,
-            touch2.clientY - touch1.clientY
-        );
-
-        const delta = currentDistance - lastTouchDistance;
-        remoteLog('Touch move - delta: ' + delta);
-        
-        if (Math.abs(delta) > 1) {
-            scale *= delta > 0 ? 1.02 : 0.98;
-            scale = Math.min(Math.max(0.5, scale), 5);
-            remoteLog('New scale: ' + scale);
-            
-            const ctx = canvas.getContext('2d');
-            ctx.clearRect(0, 0, canvas.width, canvas.height);
-            ctx.save();
-            ctx.scale(scale, scale);
-            drawGrid();
-            drawSimulation();
-            ctx.restore();
-            
-            lastTouchDistance = currentDistance;
-        }
-    }
-}
-
-function handleTouchEnd() {
-    remoteLog('Touch end');
-    lastTouchDistance = 0;
 }
 
 // Funkce pro změnu velikosti canvasu
@@ -186,7 +91,6 @@ function setupCanvasEventListeners() {
 function drawSimulation() {
     if (!ctx || !canvas) return;
 
-    ctx = canvas.getContext('2d');
     ctx.clearRect(0, 0, canvas.width, canvas.height);
     
     // Aplikace transformací
