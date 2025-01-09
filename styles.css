@@ -1,3 +1,24 @@
+/* Základní nastavení */
+html, body {
+    height: 100%;
+    margin: 0;
+    padding: 0;
+    overflow: hidden;
+}
+
+body {
+    display: flex;
+    flex-direction: column;
+}
+
+.container-fluid {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    padding: 10px;
+}
+
 /* Základní layout */
 body {
     margin: 0;
@@ -16,6 +37,22 @@ body {
     height: 100%;
 }
 
+/* Hlavní layout */
+.main-content {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    overflow: auto;
+    -webkit-overflow-scrolling: touch;
+}
+
+@media (min-width: 768px) {
+    .main-content {
+        flex-direction: row;
+    }
+}
+
 /* Editor panel */
 .editor-panel {
     display: flex;
@@ -25,6 +62,9 @@ body {
     background: #fff;
     margin: 0 10px;
     height: 100%;
+    flex: 1;
+    min-height: 200px;
+    overflow: hidden;
 }
 
 .editor-header {
@@ -145,9 +185,16 @@ body {
 }
 
 .program-list-detailed {
-    max-height: calc(100vh - 250px);
+    max-height: none;
     overflow-y: auto;
     padding-right: 10px;
+    -webkit-overflow-scrolling: touch;
+}
+
+@media (max-width: 767px) {
+    .program-list-detailed {
+        max-height: 200px;
+    }
 }
 
 .program-list-detailed .program-item {
@@ -188,9 +235,28 @@ body {
     margin-bottom: 10px;
 }
 
+/* Panel programů */
+.programs-panel {
+    flex: 0 0 auto;
+    width: 100%;
+    max-height: 40vh;
+    overflow: auto;
+    -webkit-overflow-scrolling: touch;
+}
+
+@media (min-width: 768px) {
+    .programs-panel {
+        width: 300px;
+        max-height: none;
+    }
+}
+
 /* Simulation panel */
 .simulation-panel {
     flex: 1;
+    min-height: 200px;
+    overflow: auto;
+    -webkit-overflow-scrolling: touch;
     display: flex;
     flex-direction: column;
     padding: 10px;
@@ -276,10 +342,23 @@ body {
     margin-top: 5px;
 }
 
-/* Scrollbary */
+/* Tlačítka a ovládací prvky */
+.button-panel {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+    padding: 5px 0;
+}
+
+.button-panel button {
+    flex: 1;
+    min-width: 120px;
+}
+
+/* Scrollbary pro mobilní zařízení */
 ::-webkit-scrollbar {
-    width: 8px;
-    height: 8px;
+    -webkit-appearance: none;
+    width: 7px;
 }
 
 ::-webkit-scrollbar-track {
@@ -287,8 +366,9 @@ body {
 }
 
 ::-webkit-scrollbar-thumb {
-    background: #adb5bd;
     border-radius: 4px;
+    background-color: rgba(0, 0, 0, .5);
+    -webkit-box-shadow: 0 0 1px rgba(255, 255, 255, .5);
 }
 
 ::-webkit-scrollbar-thumb:hover {
