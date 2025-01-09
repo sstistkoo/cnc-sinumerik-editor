@@ -46,7 +46,23 @@ function initializeCanvas() {
 // Funkce pro zpracování touch eventů
 let lastTouchDistance = 0;
 
+// Funkce pro vzdálené logování
+function remoteLog(message) {
+    fetch('https://remote-log.free.beeceptor.com/log', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+            message: message,
+            timestamp: new Date().toISOString(),
+            userAgent: navigator.userAgent
+        })
+    }).catch(err => console.error('Remote logging failed:', err));
+}
+
 function handleTouchStart(e) {
+    remoteLog('Touch start - počet prstů: ' + e.touches.length);
     console.log('Touch start', e.touches.length);
     if (e.touches.length === 2) {
         e.preventDefault();
@@ -56,11 +72,13 @@ function handleTouchStart(e) {
             touch2.clientX - touch1.clientX,
             touch2.clientY - touch1.clientY
         );
+        remoteLog('Touch start - vzdálenost: ' + lastTouchDistance);
     }
 }
 
 function handleTouchMove(e) {
     if (e.touches.length === 2) {
+        remoteLog('Touch move - zooming');
         console.log('Touch move - zooming');
         e.preventDefault();
         const touch1 = e.touches[0];
@@ -71,9 +89,12 @@ function handleTouchMove(e) {
         );
 
         const delta = currentDistance - lastTouchDistance;
+        remoteLog('Touch move - delta: ' + delta);
+        
         if (Math.abs(delta) > 1) {
             scale *= delta > 0 ? 1.02 : 0.98;
             scale = Math.min(Math.max(0.5, scale), 5);
+            remoteLog('New scale: ' + scale);
             
             const ctx = canvas.getContext('2d');
             ctx.clearRect(0, 0, canvas.width, canvas.height);
@@ -89,6 +110,7 @@ function handleTouchMove(e) {
 }
 
 function handleTouchEnd() {
+    remoteLog('Touch end');
     console.log('Touch end');
     lastTouchDistance = 0;
 }
