@@ -21,7 +21,7 @@ document.addEventListener('DOMContentLoaded', function() {
     }, 100);
 });
 
-// Inicializace canvasu
+// Inicializace canvasu a touch eventů
 function initializeCanvas() {
     canvas = document.getElementById('canvas');
     if (!canvas) {
@@ -41,6 +41,11 @@ function initializeCanvas() {
 
     // Vykreslení prázdné mřížky
     drawGrid();
+
+    // Inicializace touch eventů
+    canvas.addEventListener('touchstart', handleTouchStart);
+    canvas.addEventListener('touchmove', handleTouchMove);
+    canvas.addEventListener('touchend', handleTouchEnd);
 }
 
 // Funkce pro změnu velikosti canvasu
@@ -648,4 +653,50 @@ N40 G0 X0 Z0`
     for (const [name, content] of Object.entries(EXAMPLE_PROGRAMS.sub)) {
         displaySubProgram(name, content);
     }
+}
+
+// Funkce pro zpracování touch eventů
+let lastTouchDistance = 0;
+
+function handleTouchStart(e) {
+    if (e.touches.length === 2) {
+        e.preventDefault();
+        const touch1 = e.touches[0];
+        const touch2 = e.touches[1];
+        lastTouchDistance = Math.hypot(
+            touch2.clientX - touch1.clientX,
+            touch2.clientY - touch1.clientY
+        );
+    }
+}
+
+function handleTouchMove(e) {
+    if (e.touches.length === 2) {
+        e.preventDefault();
+        const touch1 = e.touches[0];
+        const touch2 = e.touches[1];
+        const currentDistance = Math.hypot(
+            touch2.clientX - touch1.clientX,
+            touch2.clientY - touch1.clientY
+        );
+
+        const delta = currentDistance - lastTouchDistance;
+        if (Math.abs(delta) > 1) {
+            scale *= delta > 0 ? 1.02 : 0.98;
+            scale = Math.min(Math.max(0.5, scale), 5);
+            
+            const ctx = canvas.getContext('2d');
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            ctx.save();
+            ctx.scale(scale, scale);
+            drawSimulation(); // Překreslí simulaci s novým měřítkem
+            ctx.restore();
+            
+            lastTouchDistance = currentDistance;
+        }
+    }
+}
+
+function handleTouchEnd() {
+    lastTouchDistance = 0;
 }
