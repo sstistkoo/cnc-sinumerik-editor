@@ -5,6 +5,9 @@ class SimulationManager {
         this.currentPointIndex = -1;
         this.codeLines = [];
         this.activeLineNumber = -1;
+        this.touchStartDistance = 0;
+        this.currentScale = 1;
+        this.isZooming = false;
     }
 
     // Nastaví body pro simulaci
@@ -99,6 +102,74 @@ class SimulationManager {
             this.currentPointIndex--;
             this.updateDisplay();
         }
+    }
+
+    // Přidání touch event listenerů
+    addTouchListeners(canvas) {
+        canvas.addEventListener('touchstart', this.handleTouchStart.bind(this), false);
+        canvas.addEventListener('touchmove', this.handleTouchMove.bind(this), false);
+        canvas.addEventListener('touchend', this.handleTouchEnd.bind(this), false);
+    }
+
+    // Funkce pro touch gesta
+    handleTouchStart(event) {
+        if (event.touches.length === 2) {
+            this.isZooming = true;
+            const touch1 = event.touches[0];
+            const touch2 = event.touches[1];
+            this.touchStartDistance = Math.hypot(
+                touch2.clientX - touch1.clientX,
+                touch2.clientY - touch1.clientY
+            );
+        }
+    }
+
+    handleTouchMove(event) {
+        if (this.isZooming && event.touches.length === 2) {
+            event.preventDefault(); // Zabrání scrollování během zoomu
+            
+            const touch1 = event.touches[0];
+            const touch2 = event.touches[1];
+            const currentDistance = Math.hypot(
+                touch2.clientX - touch1.clientX,
+                touch2.clientY - touch1.clientY
+            );
+
+            const scale = currentDistance / this.touchStartDistance;
+            const newScale = this.currentScale * scale;
+
+            // Omezení minimálního a maximálního zoomu
+            if (newScale >= 0.5 && newScale <= 5) {
+                this.currentScale = newScale;
+                this.redrawCanvas();
+            }
+        }
+    }
+
+    handleTouchEnd(event) {
+        if (event.touches.length < 2) {
+            this.isZooming = false;
+        }
+    }
+
+    // Upravení existující funkce pro zoom kolečkem
+    addWheelListener(canvas) {
+        canvas.addEventListener('wheel', (event) => {
+            event.preventDefault();
+            const scaleFactor = event.deltaY > 0 ? 0.9 : 1.1;
+            const newZoom = this.currentScale * scaleFactor;
+            
+            // Omezení minimálního a maximálního zoomu
+            if (newZoom >= 0.5 && newZoom <= 5) {
+                this.currentScale = newZoom;
+                this.redrawCanvas();
+            }
+        });
+    }
+
+    // Funkce pro překreslení canvasu
+    redrawCanvas() {
+        // Překreslení canvasu zde
     }
 }
 
