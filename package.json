@@ -1,0 +1,18 @@
+{
+  "name": "cnc-sinumerik-editor",
+  "version": "1.0.0",
+  "description": "CNC program editor for Sinumerik 840D",
+  "main": "index.js",
+  "scripts": {
+    "start": "vite",
+    "build": "vite build",
+    "serve": "vite preview"
+  },
+  "dependencies": {
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0",
+    "recharts": "^2.10.3",
+    "@vitejs/plugin-react": "^4.2.1",
+    "vite": "^5.0.10"
+  }
+}
