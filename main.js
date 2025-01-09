@@ -46,20 +46,35 @@ function initializeCanvas() {
 // Funkce pro zpracování touch eventů
 let lastTouchDistance = 0;
 
-// Funkce pro vzdálené logování
+// Funkce pro logování do localStorage
 function remoteLog(message) {
-    fetch('https://remote-log.free.beeceptor.com/log', {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-            message: message,
-            timestamp: new Date().toISOString(),
-            userAgent: navigator.userAgent
-        })
-    }).catch(err => console.error('Remote logging failed:', err));
+    const logs = JSON.parse(localStorage.getItem('touchLogs') || '[]');
+    logs.push({
+        message: message,
+        timestamp: new Date().toISOString(),
+        userAgent: navigator.userAgent
+    });
+    localStorage.setItem('touchLogs', JSON.stringify(logs));
 }
+
+// Funkce pro zobrazení logů
+function showLogs() {
+    const logs = JSON.parse(localStorage.getItem('touchLogs') || '[]');
+    console.log('Touch Logs:', logs);
+    localStorage.removeItem('touchLogs'); // Vyčistíme logy po zobrazení
+}
+
+// Přidáme tlačítko pro zobrazení logů
+document.addEventListener('DOMContentLoaded', function() {
+    const button = document.createElement('button');
+    button.textContent = 'Zobrazit logy';
+    button.style.position = 'fixed';
+    button.style.bottom = '10px';
+    button.style.right = '10px';
+    button.style.zIndex = '9999';
+    button.onclick = showLogs;
+    document.body.appendChild(button);
+});
 
 function handleTouchStart(e) {
     remoteLog('Touch start - počet prstů: ' + e.touches.length);
