@@ -10,8 +10,49 @@ let scale = 1;
 let offsetX = 0;
 let offsetY = 0;
 
+// Funkce pro logování do localStorage
+function remoteLog(message) {
+    console.log('DEBUG:', message); // Přidáváme přímý výpis do konzole
+    const logs = JSON.parse(localStorage.getItem('touchLogs') || '[]');
+    logs.push({
+        message: message,
+        timestamp: new Date().toISOString(),
+        userAgent: navigator.userAgent
+    });
+    localStorage.setItem('touchLogs', JSON.stringify(logs));
+}
+
+// Funkce pro zobrazení logů
+function showLogs() {
+    const logs = JSON.parse(localStorage.getItem('touchLogs') || '[]');
+    console.log('=== Touch Logs ===');
+    logs.forEach(log => {
+        console.log(`${log.timestamp}: ${log.message}`);
+    });
+    console.log('================');
+    localStorage.removeItem('touchLogs'); // Vyčistíme logy po zobrazení
+}
+
 // Inicializace po načtení dokumentu
 document.addEventListener('DOMContentLoaded', function() {
+    console.log('DOM Content Loaded');
+    
+    // Přidáme tlačítko pro zobrazení logů
+    const button = document.createElement('button');
+    button.textContent = 'Zobrazit logy';
+    button.style.position = 'fixed';
+    button.style.bottom = '10px';
+    button.style.right = '10px';
+    button.style.zIndex = '9999';
+    button.style.padding = '10px';
+    button.style.backgroundColor = '#007bff';
+    button.style.color = 'white';
+    button.style.border = 'none';
+    button.style.borderRadius = '5px';
+    button.onclick = showLogs;
+    document.body.appendChild(button);
+    console.log('Debug button added');
+
     // Počkáme na načtení DOM
     setTimeout(() => {
         initializeCanvas();
@@ -46,39 +87,8 @@ function initializeCanvas() {
 // Funkce pro zpracování touch eventů
 let lastTouchDistance = 0;
 
-// Funkce pro logování do localStorage
-function remoteLog(message) {
-    const logs = JSON.parse(localStorage.getItem('touchLogs') || '[]');
-    logs.push({
-        message: message,
-        timestamp: new Date().toISOString(),
-        userAgent: navigator.userAgent
-    });
-    localStorage.setItem('touchLogs', JSON.stringify(logs));
-}
-
-// Funkce pro zobrazení logů
-function showLogs() {
-    const logs = JSON.parse(localStorage.getItem('touchLogs') || '[]');
-    console.log('Touch Logs:', logs);
-    localStorage.removeItem('touchLogs'); // Vyčistíme logy po zobrazení
-}
-
-// Přidáme tlačítko pro zobrazení logů
-document.addEventListener('DOMContentLoaded', function() {
-    const button = document.createElement('button');
-    button.textContent = 'Zobrazit logy';
-    button.style.position = 'fixed';
-    button.style.bottom = '10px';
-    button.style.right = '10px';
-    button.style.zIndex = '9999';
-    button.onclick = showLogs;
-    document.body.appendChild(button);
-});
-
 function handleTouchStart(e) {
     remoteLog('Touch start - počet prstů: ' + e.touches.length);
-    console.log('Touch start', e.touches.length);
     if (e.touches.length === 2) {
         e.preventDefault();
         const touch1 = e.touches[0];
@@ -94,7 +104,6 @@ function handleTouchStart(e) {
 function handleTouchMove(e) {
     if (e.touches.length === 2) {
         remoteLog('Touch move - zooming');
-        console.log('Touch move - zooming');
         e.preventDefault();
         const touch1 = e.touches[0];
         const touch2 = e.touches[1];
@@ -126,7 +135,6 @@ function handleTouchMove(e) {
 
 function handleTouchEnd() {
     remoteLog('Touch end');
-    console.log('Touch end');
     lastTouchDistance = 0;
 }
 
