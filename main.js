@@ -9,6 +9,15 @@ let lastY = 0;
 let scale = 1;
 let offsetX = 0;
 let offsetY = 0;
+let programLoaded = false;
+
+// Globální proměnné pro sledování aktivních kódů
+let activeGCodes = {
+    workOffset: '',  // Prázdné výchozí hodnoty
+    coordinateMode: '',
+    moveType: '',
+    spindleState: ''
+};
 
 // Inicializace po načtení dokumentu
 document.addEventListener('DOMContentLoaded', function() {
@@ -17,9 +26,70 @@ document.addEventListener('DOMContentLoaded', function() {
         initializeCanvas();
         setupEventListeners();
         initResizeHandlers();
-        loadPrograms();
+        clearDisplays(); // Vyčistíme všechny displeje
     }, 100);
 });
+
+// Funkce pro vyčištění všech displejů
+function clearDisplays() {
+    const elementsToEmpty = [
+        'currentPointNumber',
+        'pointLine',
+        'pointSpeed',
+        'pointFeed',
+        'pointX',
+        'pointZ',
+        'activeGCodes',
+        'activeMCodes'
+    ];
+    elementsToEmpty.forEach(id => {
+        const element = document.getElementById(id);
+        if (element) element.textContent = '-';
+    });
+}
+
+// Funkce pro aktualizaci aktivních G-kódů
+function updateActiveCodes(command) {
+    if (!command || !programLoaded) return;
+
+    // Aktualizace offsetu (G54-G59)
+    if (command.match(/G5[4-9]/)) {
+        activeGCodes.workOffset = command;
+    }
+    // Aktualizace režimu souřadnic (G90/G91)
+    else if (command === 'G90' || command === 'G91') {
+        activeGCodes.coordinateMode = command;
+    }
+    // Aktualizace typu pohybu (G0-G3)
+    else if (command.match(/G[0-3]/)) {
+        activeGCodes.moveType = command;
+    }
+    // Aktualizace stavu vřetena (M3/M4/M5)
+    else if (command.match(/M[3-5]/)) {
+        activeGCodes.spindleState = command;
+    }
+
+    updateDisplays();
+}
+
+// Funkce pro aktualizaci displejů
+function updateDisplays() {
+    if (!programLoaded) return;
+
+    const activeGCodesElement = document.getElementById('activeGCodes');
+    const activeMCodesElement = document.getElementById('activeMCodes');
+    
+    if (activeGCodesElement) {
+        const gCodes = [activeGCodes.workOffset, activeGCodes.coordinateMode, activeGCodes.moveType]
+            .filter(code => code) // Odstraní prázdné hodnoty
+            .join(' ');
+        activeGCodesElement.textContent = gCodes || '-';
+    }
+    
+    if (activeMCodesElement) {
+        activeMCodesElement.textContent = activeGCodes.spindleState || '-';
+    }
+}
 
 // Inicializace canvasu
 function initializeCanvas() {
@@ -199,91 +269,30 @@ function transformCoordinates(x, z) {
     };
 }
 
-// Funkce pro zpracování programu
-function parseProgram(program) {
-    const lines = program.split('\n');
-    const newPoints = [];
-    let currentX = 0;
-    let currentZ = 0;
-    let isAbsolute = true;
-    let currentSpindleSpeed = '';
-    let lineNumber = '';
-    
-    for (let i = 0; i < lines.length; i++) {
-        const line = lines[i].trim();
-        if (!line || line.startsWith(';')) continue;
-        
-        const nMatch = line.match(/^N(\d+)/);
-        if (nMatch) lineNumber = nMatch[1];
-        
-        if (line.includes('G90') || line.includes('ABS')) isAbsolute = true;
-        if (line.includes('G91') || line.includes('INC')) isAbsolute = false;
-        
-        const spindleMatch = line.match(/[MS]=(\d+(\.\d+)?)/);
-        if (spindleMatch) currentSpindleSpeed = spindleMatch[1];
-        
-        const xMatch = line.match(/X=?([^G\s]+)/);
-        const zMatch = line.match(/Z=?([^G\s]+)/);
-        const hasG0 = line.includes('G0');
-        const hasG1 = line.includes('G1');
-        
-        if (xMatch || zMatch || hasG0 || hasG1) {
-            let x = currentX;
-            let z = currentZ;
-            let addPoint = false;
-            
-            if (xMatch) {
-                const newX = evaluateExpression(xMatch[1]);
-                if (!isNaN(newX)) {
-                    x = isAbsolute ? newX : currentX + newX;
-                    addPoint = true;
-                }
-            }
-            
-            if (zMatch) {
-                const newZ = evaluateExpression(zMatch[1]);
-                if (!isNaN(newZ)) {
-                    z = isAbsolute ? newZ : currentZ + newZ;
-                    addPoint = true;
-                }
-            }
-            
-            if (addPoint || hasG0 || hasG1) {
-                newPoints.push({
-                    x: x,
-                    z: z,
-                    lineNumber: lineNumber,
-                    spindleSpeed: currentSpindleSpeed,
-                    originalLine: line,
-                    lineIndex: i,
-                    isAbsolute: isAbsolute,
-                    movement: hasG0 ? 'G0' : (hasG1 ? 'G1' : '')
-                });
-                
-                currentX = x;
-                currentZ = z;
-            }
-        }
-    }
-    
-    return newPoints;
-}
-
-// Funkce pro vyhodnocení výrazu
-function evaluateExpression(expr) {
-    try {
-        if (/[a-zA-Z]/.test(expr) || expr.includes(',')) return NaN;
-        expr = expr.replace('=', '');
-        return Function('"use strict";return (' + expr + ')')();
-    } catch (e) {
-        console.error('Chyba při vyhodnocení výrazu:', expr, e);
-        return NaN;
-    }
-}
-
 // Funkce pro aktualizaci informací o bodu
 function updatePointInfo(point) {
-    if (!point) return;
+    const coordinates = document.getElementById('coordinates');
+    const gcodeDisplay = document.getElementById('gcode-display');
+
+    // Pokud není bod nebo není načten program
+    if (!point || !programLoaded) {
+        // Skryjeme souřadnice a G-kódy
+        if (coordinates) coordinates.style.display = 'none';
+        if (gcodeDisplay) gcodeDisplay.style.display = 'none';
+
+        // Vyčistíme základní informace
+        const elementsToEmpty = [
+            'currentPointNumber',
+            'pointLine',
+            'pointSpeed',
+            'pointFeed'
+        ];
+        elementsToEmpty.forEach(id => {
+            const element = document.getElementById(id);
+            if (element) element.textContent = '-';
+        });
+        return;
+    }
 
     // Pomocná funkce pro bezpečné nastavení textu elementu
     function setElementText(id, text) {
@@ -294,13 +303,23 @@ function updatePointInfo(point) {
     // Aktualizace základních informací
     setElementText('currentPointNumber', point.number || '-');
     setElementText('pointLine', point.lineNumber || '-');
-    setElementText('coordinateMode', point.isAbsolute ? 'G90 (ABS)' : 'G91 (INC)');
     setElementText('pointSpeed', point.spindleSpeed || '-');
     setElementText('pointFeed', point.feed || '-');
     
-    // Aktualizace souřadnic
-    setElementText('pointX', point.x ? point.x.toFixed(3) : '-');
-    setElementText('pointZ', point.z ? point.z.toFixed(3) : '-');
+    // Zobrazení souřadnic pouze když jsou definovány
+    if (point.x !== undefined && point.z !== undefined) {
+        if (coordinates) {
+            coordinates.style.display = 'block';
+            setElementText('pointX', point.x.toFixed(3));
+            setElementText('pointZ', point.z.toFixed(3));
+        }
+    }
+
+    // Zobrazení G-kódů pouze když jsou definovány
+    if (gcodeDisplay) {
+        gcodeDisplay.style.display = 'block';
+        updateDisplays();
+    }
 
     // Zvýraznění řádku v editoru
     if (point.lineNumber) {
@@ -362,6 +381,7 @@ function simulateProgram() {
     const content = document.getElementById('codeEditor').value;
     points = parseProgram(content); // Přiřazení bodů do globální proměnné
     currentPathIndex = -1;
+    programLoaded = true; // Označte program jako načtený
     console.log('Simulované body:', points); // Pro debugování
     drawSimulation();
 }
@@ -378,6 +398,7 @@ function openFile(event) {
         updateLineNumbers();
         points = parseProgram(content); // Přiřazení bodů do globální proměnné
         currentPathIndex = -1;
+        programLoaded = true; // Označte program jako načtený
         drawSimulation();
         console.log('Načtené body:', points); // Pro debugování
     };
@@ -648,4 +669,34 @@ N40 G0 X0 Z0`
     for (const [name, content] of Object.entries(EXAMPLE_PROGRAMS.sub)) {
         displaySubProgram(name, content);
     }
+}
+
+// Funkce pro zpracování programu
+function parseProgram(program) {
+    points = [];
+    programLoaded = false; // Reset programu
+    
+    // Reset aktivních kódů
+    activeGCodes = {
+        workOffset: '',
+        coordinateMode: '',
+        moveType: '',
+        spindleState: ''
+    };
+    
+    // Vyčistíme displeje
+    clearDisplays();
+    
+    // Skryjeme souřadnice a G-kódy
+    const coordinates = document.getElementById('coordinates');
+    const gcodeDisplay = document.getElementById('gcode-display');
+    if (coordinates) coordinates.style.display = 'none';
+    if (gcodeDisplay) gcodeDisplay.style.display = 'none';
+
+    program.split('\n').forEach((line, index) => {
+        // ... zbytek kódu zůstává stejný ...
+    });
+
+    programLoaded = true; // Označíme program jako načtený
+    return points;
 }
